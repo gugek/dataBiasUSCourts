@@ -21,6 +21,10 @@ Processing notes:
   a recess appointment date, use that date for start
 - Ignore nominations (that aren't recess appointments) that aren't
   commissioned yet
+- John Porfilio is correct in FJC dataset, but Moore is exceptioned in as a
+  an added entry.
+- Carolyn Dineen King wrote as Carolyn Dineen Randall until 1988.
+- Multi word names are O' and Van prefixes.
 """
 
 import argparse
@@ -100,7 +104,27 @@ def main(args):
             commission['EndYear'] = get_year(row['Termination Date']) or \
                 datetime.now().year
             if len(commission['Circuit']) > 0:
+                # exceptions and additions
+                alt_commission = None
+                if commission['Judge'] == 'Porfilio< John Carbone':
+                    alt_commission = commission.copy()
+                    alt_commission['Judge'] = 'Moore< John'
+                    alt_commission['EndYear'] = 1996
+                    commission['StartYear'] = 1996
+                # Carolyn Dineen King
+                elif commission['Judge'] == 'King< Carolyn Dineen':
+                    alt_commission = commission.copy()
+                    alt_commission['Judge'] = 'Randall< Carolyn'
+                    alt_commission['EndYear'] = 1988
+                    commission['StartYear'] = 1988
+                # handle Van
+                elif re.search("^(Van |O')", commission['Judge']):
+                    judge_name = re.sub("^(Van |O')", '', commission['Judge'])
+                    alt_commission = commission.copy()
+                    alt_commission['Judge'] = judge_name
                 out_csv.writerow(commission)
+                if alt_commission is not None:
+                    out_csv.writerow(alt_commission)
         previous_commission = commission
 
 
