@@ -70,10 +70,11 @@ def get_year(text):
 
 
 def main(args):
-    fjc_csv = csv.DictReader(open(args.input, newline=''))
+    fjc_csv = csv.DictReader(open(args.input, newline='', encoding="UTF8"))
     judge = {}
     fieldnames = ['Judge', 'Circuit', 'Party', 'StartYear', 'EndYear']
-    out_csv = csv.DictWriter(open(args.output, 'w', newline=''),
+    out_csv = csv.DictWriter(open(args.output, 'w', newline='',
+            encoding="UTF8"),
         fieldnames=fieldnames, extrasaction="ignore")
     out_csv.writeheader()
     previous_commission = { 'Judge': ''}
@@ -94,6 +95,15 @@ def main(args):
                 commission['Party'] = row['Party of Appointing President']
         else:
             commission['Party'] = row['Party of Appointing President']
+        party = commission['Party']
+        #  1 if the judge was appointed by a Democratic president and 0 if a Republican.
+
+        if party == 'Democratic':
+            commission['Party'] = 1
+        elif party == 'Republican':
+            commission['Party'] = 0
+        else:            
+            commission['Party'] = None
         start_date_text = ''
         if len(row.get('Commission Date', '')) == 0:
             start_date_text =  row.get('Recess Appointment Date', '')
