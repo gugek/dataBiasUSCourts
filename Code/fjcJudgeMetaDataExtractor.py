@@ -8,17 +8,26 @@ Use the commission centered (Federal Judicial Service) table available at:
 
 Processing notes:
 
-- If there is no appointing judge if there is new commission or appointment,
-  use the party of the previous commission's appointing president.
+- If there is no appointing presidential party, when there is a new
+  commission or appointment, use the party of the previous commission's
+  appointing president.
 - Transform USCA into codes: 1-11; FC (Federal Circuit); CIT (Court of
   International Trade); and, DC (DC Circuit).
 - Replaces `,` with `<` in the names of the judges for further processing.
+- use FJC's termination date for the end of a commission; senior status is
+  there, but typically it varies how often a judge keeps serving under senior
+  status.
+- Handling recess appointment dates: if there is no commission date, look for
+  a recess appointment date, use that date for start
+- Ignore nominations (that aren't recess appointments) that aren't
+  commissioned yet
 """
 
 import argparse
 import csv
 import logging
 import re
+from datetime import datetime
 
 
 court_map = {
@@ -37,6 +46,23 @@ court_map = {
     'U.S. Court of Appeals for the Third Circuit': '3',
     'U.S. Court of International Trade': 'CIT'
 }
+
+
+def get_year(text):
+    pattern = "%Y-%m-%d"
+    year = None
+    try:
+        d = datetime.strptime(text, pattern)
+    except:
+        try:
+            d = datetime.stpftime(text[0:3] + '-01-01', pattern )
+        except:
+            d = None
+    if d is not None:
+        year = d.year
+    else:
+        year = None
+    return year
 
 
 def main(args):
@@ -64,11 +90,18 @@ def main(args):
                 commission['Party'] = row['Party of Appointing President']
         else:
             commission['Party'] = row['Party of Appointing President']
-        commission['StartYear'] = row['Commission Date']
-        commission['EndYear'] = row['Termination Date']
+        start_date_text = ''
+        if len(row.get('Commission Date', '')) == 0:
+            start_date_text =  row.get('Recess Appointment Date', '')
+        else:
+            start_date_text = row.get('Commission Date', '')
+        if len(start_date_text) > 0:
+            commission['StartYear'] = get_year(start_date_text)
+            commission['EndYear'] = get_year(row['Termination Date']) or \
+                datetime.now().year
+            if len(commission['Circuit']) > 0:
+                out_csv.writerow(commission)
         previous_commission = commission
-        if len(commission['Circuit']) > 0:
-            out_csv.writerow(commission)
 
 
 def setup_logging(args):
