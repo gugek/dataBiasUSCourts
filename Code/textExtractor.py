@@ -1,14 +1,15 @@
 import os
 import sys
 import csv
-import random 
+import random
 from collections import defaultdict
 import caseClass
 import helpers
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# from importlib import reload
+# reload(sys)
+# sys.setdefaultencoding('UTF8')
 
-##This file contains code to prune cases based on our criteria and then output a csv file for each circuit containing the text of the 
+##This file contains code to prune cases based on our criteria and then output a csv file for each circuit containing the text of the
 ##remaining cases and some meta information about them, including our tagging of USParty, corpParty, and judges on the panel.
 ##It will also create a file for each circuit with the number of cases that were excluded for each step of the pruning process.
 ##Finally it will sample cases and output them and the assigned judges and USParty and corpParty tags which can be used to
@@ -18,7 +19,7 @@ sys.setdefaultencoding('utf-8')
 def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,clusterDir,stmOutFileName,pruningOutFileName,sampleCaseCandidateList):
 
 	#open the file that we will write everything out to to run the topic model on
-	with open(stmOutFileName,'wb') as stmFile:
+	with open(stmOutFileName,'w', encoding="UTF8") as stmFile:
 
 		stmCSVFile = csv.writer(stmFile,quoting=csv.QUOTE_ALL)
 
@@ -40,12 +41,12 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 		judgeParties = [j.party for j in judgeList]
 		for i in range(numPermsToGenerate):
 			judgePartyPermutations.append(random.sample(judgeParties,len(judgeParties)))
-		
+
 		#will hold the actual instances of case classes for the cases in sampleCaseCandidateList
 		#we also build a list of the text at this point so that for a case we can assign it a value of the text before
 		#judge names are removed, newlines are removed etc.  otherwise it will be hard to manually validate
 		sampleCases=[]
-		sampleCaseText=[]	
+		sampleCaseText=[]
 
 
 		rowNum = 0
@@ -53,9 +54,9 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 		for fileName in os.listdir(opinionDir):
 			countsDict['Total'] +=1
 			if countsDict['Total']%500==0:
-				print "Processed " + str(countsDict['Total']) + " files for " + circuitName + "."
-			
-			#create an instance of our caseClass corresponding to this case.	
+				print("Processed " + str(countsDict['Total']) + " files for " + circuitName + ".")
+
+			#create an instance of our caseClass corresponding to this case.
 			curCase = caseClass.case(fileName, circuitName,opinionDir,clusterDir)
 
 			#check for things which may exclude this case from analysis
@@ -78,9 +79,9 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 				countsDict['No Valid HTML'] +=1
 				continue
 
-			#if it has passed all checks so far, create the plain text version of the case 
+			#if it has passed all checks so far, create the plain text version of the case
 			curCase.assignCleanText()
-			
+
 			#throw out cases with insufficent amount of text
 			if curCase.getTextSize() <3000:
 				countsDict['Smaller than 3KB'] +=1
@@ -89,7 +90,7 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 
 			#keep only cases where the federal citation number in the header(cluster)
 			#is the same as what is listed at the top of the cases text
-			if curCase.fedCite.lower() not in curCase.cleanText.split('\n')[0].lower(): 
+			if curCase.fedCite.lower() not in curCase.cleanText.split('\n')[0].lower():
 				countsDict['Fed Cite not in Text'] +=1
 				continue
 
@@ -117,12 +118,12 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 			#remove state names from the text so we don't end up with topics which are just states names
 			curCase.removeTargetWordsFromText()
 
-			
+
 
 			rowNum+=1
 			newRow=[rowNum,fileName,curCase.cleanText,curCase.getJudgePartiesList(),curCase.yearFiled,curCase.circuitNum,
 						curCase.getJudgeNames(),curCase.USParty,curCase.corpParty]
-			
+
 
 			#add the permuted party data to the row before we write it
 			for permNum in range(numPermsToGenerate):
@@ -132,28 +133,29 @@ def extractText(circuitName,numPermsToGenerate, judgeFileName,opinionDir,cluster
 				newRow.append(permJudgeList)
 
 			stmCSVFile.writerow(newRow)
-													
 
 
-	#create a file which tells how many opinions remained at each step of pruning	
-	pruningOrder = ['No Cluster','Not Precedential','No Federal Citation','Before 1970','After 2010','No Valid HTML','Smaller than 3KB','Fed Cite not in Text','Not Exactly Three Judges']							
-	
-	with open(pruningOutFileName,'w') as statOut:
+
+	#create a file which tells how many opinions remained at each step of pruning
+	pruningOrder = ['No Cluster','Not Precedential','No Federal Citation','Before 1970','After 2010','No Valid HTML','Smaller than 3KB','Fed Cite not in Text','Not Exactly Three Judges']
+
+	with open(pruningOutFileName,'w', encoding="UTF8") as statOut:
 		statOut.write("Started with " + str(countsDict['Total']) + ' opinions from court listener.  The following numbers were removed for each reason:\n')
 		for key in pruningOrder:
 			statOut.write(key + ": " + str(countsDict[key]) +'\n')
-	
+
 		statOut.write("\nLeaving a total of " + str(rowNum) + ' documents in our corpus from this circuit.')
 
 	return sampleCases,sampleCaseText
 
-#actuallyRun the creation of the the .csv files for the circuits in circuitlist	
+#actuallyRun the creation of the the .csv files for the circuits in circuitlist
 #circuitList names needs to match the folder names in opinions, clusters
 #will output numValidationSamplesOutput cases with the USParty, corpParty, and judge's identified for manual validation
 def runExtraction(baseOpinionDir, baseClusterDir, circuitList, numPermsToGenerate,numValidationSamplesOutput):
 
 	#file with information on judge names, parties, etc
-	judgeFileName = os.path.join('..','Data','judges',"auburnDataAppointingPresParty.csv")
+	# judgeFileName = os.path.join('..','Data','judges',"auburnDataAppointingPresParty.csv")
+	judgeFileName = os.path.join('..','Data','judges',"fjcJudgeCommissions.csv")
 
 	#directory to contain CSVs for the STM
 	outPutDir = os.path.join('..','Data','stmCSV')
@@ -178,7 +180,7 @@ def runExtraction(baseOpinionDir, baseClusterDir, circuitList, numPermsToGenerat
 	#keep 5 times the number we want to ultimately have in our sample so we have enough even after pruning
 	random.shuffle(sampleFilesList)
 	sampleFilesList = sampleFilesList[:10*numValidationSamplesOutput]
-	
+
 	#will hold the casees and case text for our validation sample
 	sampleCases=[]
 	sampleCaseText =[]
@@ -195,8 +197,8 @@ def runExtraction(baseOpinionDir, baseClusterDir, circuitList, numPermsToGenerat
 		#create the .csv for the STM for this circuit and update our lists of the cases we use for validation
 		circuitCases,circuitCaseText = extractText(circuitName,numPermsToGenerate,judgeFileName,opinionDir,clusterDir,stmOutFileName,pruningOutFileName,sampleFilesList)
 		sampleCases = sampleCases+circuitCases
-		sampleCaseText = sampleCaseText + circuitCaseText	
-	
+		sampleCaseText = sampleCaseText + circuitCaseText
+
 	#shuffle the cases which passed the preliminary validation again, since we added them ciruit by circuit
 	sampleInds = range(len(sampleCases))
 	random.shuffle(sampleInds)
@@ -204,7 +206,7 @@ def runExtraction(baseOpinionDir, baseClusterDir, circuitList, numPermsToGenerat
 	#create the actual files which will be manually inspected for validation
 	for caseInd in sampleInds[:numValidationSamplesOutput]:
 		curCase = sampleCases[caseInd]
-		with open(os.path.join(valOutputDir,curCase.opinionFileName[:-4]+'txt'),'w') as outFile:
+		with open(os.path.join(valOutputDir,curCase.opinionFileName[:-4]+'txt'),'w', encoding="UTF8") as outFile:
 			judgeOut = [j.fullName for j in curCase.caseJudges ]
 			outFile.write('Judges: ' + str(judgeOut) + '\n')
 			outFile.write('USParty: ' + str(curCase.USParty) + '\n')
@@ -217,7 +219,8 @@ if __name__ == "__main__":
 	#seed the random generator so future runs are consistent with reported results
 	random.seed(12345)
 
-	circuitList = ['ca1','ca2','ca3','ca4','ca5','ca6','ca7','ca8','ca9','ca10','ca11','cadc']
+	# circuitList = ['ca1','ca2','ca3','ca4','ca5','ca6','ca7','ca8','ca9','ca10','ca11','cadc']
+	circuitList = ['ca1', 'ca11','cadc']
 	numPermsToGenerate = 100
 	numValidationSamplesOutput = 100
 
@@ -225,10 +228,3 @@ if __name__ == "__main__":
 	baseClusterDir=os.path.join('..','Data','clusters')
 
 	runExtraction(baseOpinionDir,baseClusterDir,circuitList,numPermsToGenerate,numValidationSamplesOutput)
-	
-
-
-		
-
-
-		
