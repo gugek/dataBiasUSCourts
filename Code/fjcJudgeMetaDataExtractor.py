@@ -1,3 +1,20 @@
+"""
+Create a Judge Metadata file for the project based on the Federal Judicial
+Center's Biographical Directory of Article III Federal Judges, 1789-present.
+
+Use the commission centered (Federal Judicial Service) table available at:
+
+- https://www.fjc.gov/history/judges/biographical-directory-article-iii-federal-judges-export
+
+Processing notes:
+
+- If there is no appointing judge if there is new commission or appointment,
+  use the party of the previous commission's appointing president.
+- Transform USCA into codes: 1-11; FC (Federal Circuit); CIT (Court of
+  International Trade); and, DC (DC Circuit).
+- Replaces `,` with `<` in the names of the judges for further processing.
+"""
+
 import argparse
 import csv
 import logging
@@ -20,6 +37,8 @@ court_map = {
     'U.S. Court of Appeals for the Third Circuit': '3',
     'U.S. Court of International Trade': 'CIT'
 }
+
+
 def main(args):
     fjc_csv = csv.DictReader(open(args.input, newline=''))
     judge = {}
@@ -50,9 +69,6 @@ def main(args):
         previous_commission = commission
         if len(commission['Circuit']) > 0:
             out_csv.writerow(commission)
-
-
-
 
 
 def setup_logging(args):
@@ -92,8 +108,8 @@ def parse_args():
                         default='WARNING', help="Python logging levels")
     parser.add_argument('input', help='csv input file')
     parser.add_argument('output', help="csv output")
-
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = parse_args()
